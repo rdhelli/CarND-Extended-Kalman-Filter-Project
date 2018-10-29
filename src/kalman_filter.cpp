@@ -21,28 +21,18 @@ void KalmanFilter::Init(VectorXd &x_in, MatrixXd &P_in, MatrixXd &F_in,
 }
 
 void KalmanFilter::Predict() {
-  /**
-  TODO:
-    * predict the state
-  */
-    // linear motion model: Fj == F
     x_ = F_ * x_;
     MatrixXd Ft = F_.transpose();
     P_ = F_ * P_ * Ft + Q_;
 }
 
 void KalmanFilter::Update(const VectorXd &z) {
-  /**
-  TODO:
-    * update the state by using Kalman Filter equations
-  */
-    VectorXd z_pred = H_ * x_;
-    VectorXd y = z - z_pred;
+    //obtaining Kalman gain
+    VectorXd y = z - H_ * x_;
     MatrixXd Ht = H_.transpose();
     MatrixXd S = H_ * P_ * Ht + R_;
-    MatrixXd Si = S.inverse();
-    MatrixXd PHt = P_ * Ht;
-    MatrixXd K = PHt * Si;
+    MatrixXd Si = S.inverse(); 
+    MatrixXd K = P_ * Ht * Si;
 
     //new estimate
     x_ = x_ + (K * y);
@@ -52,18 +42,26 @@ void KalmanFilter::Update(const VectorXd &z) {
 }
 
 void KalmanFilter::UpdateEKF(const VectorXd &z) {
-  /**
-  TODO:
-    * update the state by using Extended Kalman Filter equations
-  */
-    MatrixXd Hj = Tools::CalculateJacobian(x_);
+    //polar coordinate values
+    float rho = sqrt(pow(x_[0],2) + pow(x_[1],2));
+    float phi = atan2(x_[1] / x_[0]);
+    if(rho < .0001) phi += .001;
+    float rho_rate = (x_[0]*x_[2] + x_[1]*x_[3]) / rho;
+    
+    //measurement function, h, to transform from Cartesian to polar
+    h = VectorXd(3);
+    h << rho, phi, rho_rate;
 
-    VectorXd y = z - h(x_);
-    MatrixXd Hjt = Hj.transpose();
-    MatrixXd S = Hj  * P_ * Hjt + R_;
+    //normalizing
+    while(h[1] > M_PI) h[1] -= 2*M_PI;
+    while(h[1] < -M_PI) h[1] += 2*M_PI;
+    
+    //obtaining Kalman gain
+    VectorXd y = z - h;
+    MatrixXd Ht = H_.transpose();
+    MatrixXd S = H_ * P_ * Ht + R_;
     MatrixXd Si = S.inverse();
-    MatrixXd PHjt = P_ * Hjt;
-    MatrixXd K = PHjt * Si;
+    MatrixXd K = P_ * Ht * Si;
 
     //new estimate
     x_ = x_ + (K * y);
