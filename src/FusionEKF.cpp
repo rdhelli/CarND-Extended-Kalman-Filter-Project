@@ -2,7 +2,6 @@
 #include "tools.h"
 #include "Eigen/Dense"
 #include <iostream>
-#include <math.h>
 
 using namespace std;
 using Eigen::MatrixXd;
@@ -35,9 +34,6 @@ FusionEKF::FusionEKF() {
   //measurement matrix - laser (the radar matrix is linearized per each time step)
   H_laser_ << 1, 0, 0, 0,
               0, 1, 0, 0;
-
-  float noise_ax = 9;
-  float noise_ay = 9;
 }
 
 /**
@@ -84,8 +80,9 @@ void FusionEKF::ProcessMeasurement(const MeasurementPackage &measurement_pack) {
       */
       float rho = measurement_pack.raw_measurements_[0];
       float phi = measurement_pack.raw_measurements_[1];
-      float rho_rate = measurement_pack.raw_measurements_[2];
-      ekf_x_ << rho * cos(phi), rho * sin(phi), rho_rate * cos(phi), rho_rate * sin(phi);
+      // float rho_rate = measurement_pack.raw_measurements_[2];
+      // ekf_.x_ << rho * cos(phi), rho * sin(phi), rho_rate * cos(phi), rho_rate * sin(phi);
+      ekf_.x_ << rho * cos(phi), rho * sin(phi), 0, 0;
     }
     else if (measurement_pack.sensor_type_ == MeasurementPackage::LASER) {
       /**
@@ -109,6 +106,9 @@ void FusionEKF::ProcessMeasurement(const MeasurementPackage &measurement_pack) {
   float dt_3_2 = dt_2 * dt / 2;
   float dt_4_4 = dt_2 * dt_2 / 4;
 
+  float noise_ax = 9;
+  float noise_ay = 9;
+
   ekf_.F_(0, 2) = dt;
   ekf_.F_(1, 3) = dt;
   
@@ -125,11 +125,12 @@ void FusionEKF::ProcessMeasurement(const MeasurementPackage &measurement_pack) {
   if (measurement_pack.sensor_type_ == MeasurementPackage::RADAR) {
     // Radar updates
     Tools tools;
-    Hj_ = tools.CalculateJacobian(ekf_.x_)
+    Hj_ = tools.CalculateJacobian(ekf_.x_);
     ekf_.H_ = Hj_;
     ekf_.R_ = R_radar_;
     ekf_.UpdateEKF(measurement_pack.raw_measurements_);
-  } else {
+  }
+  else {
     // Laser updates
     ekf_.H_ = H_laser_;
     ekf_.R_ = R_laser_;
