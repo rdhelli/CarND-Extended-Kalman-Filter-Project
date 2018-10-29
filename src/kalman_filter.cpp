@@ -52,13 +52,14 @@ void KalmanFilter::UpdateEKF(const VectorXd &z) {
   //measurement function, h, to transform from Cartesian to polar
   VectorXd h(3);
   h << rho, phi, rho_rate;
-
-  //normalizing
-  while(h[1] > M_PI) h[1] -= 2*M_PI;
-  while(h[1] < -M_PI) h[1] += 2*M_PI;
   
   //obtaining Kalman gain
   VectorXd y = z - h;
+
+  //normalizing
+  while(y[1] > M_PI) y[1] -= 2*M_PI;
+  while(y[1] < -M_PI) y[1] += 2*M_PI;
+  
   MatrixXd Ht = H_.transpose();
   MatrixXd S = H_ * P_ * Ht + R_;
   MatrixXd Si = S.inverse();
